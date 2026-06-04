@@ -345,7 +345,7 @@ auth.get('/session', requireAuth, async (c) => {
   const user = c.get('user');
   const { data: profile } = await supabase(
     c.env, 'GET',
-    `/profiles?id=eq.${user.sub}&select=email,wallet_balance,is_admin,created_at`,
+    `/profiles?id=eq.${user.sub}&select=id,email,wallet_balance,is_admin,created_at`,
   );
   return ok({ user: profile?.[0] || null });
 });
