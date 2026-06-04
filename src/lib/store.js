@@ -1,13 +1,28 @@
 import { create } from 'zustand'
 
+const cachedUser = (() => {
+  try {
+    const s = localStorage.getItem('pbbd_user')
+    return s ? JSON.parse(s) : null
+  } catch { return null }
+})()
+
 export const useStore = create((set, get) => ({
-  user: null,
-  loading: true,
+  user: cachedUser,
+  loading: cachedUser === null,
   toast: null,
   lang: localStorage.getItem('pbbd_lang') || 'bn',
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    try {
+      if (user) localStorage.setItem('pbbd_user', JSON.stringify(user))
+      else localStorage.removeItem('pbbd_user')
+    } catch {}
+    set({ user })
+  },
+
   setLoading: (loading) => set({ loading }),
+
   setLang: (lang) => {
     localStorage.setItem('pbbd_lang', lang)
     document.documentElement.lang = lang

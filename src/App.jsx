@@ -25,8 +25,9 @@ import Users from './pages/admin/Users.jsx'
 import AuditLog from './pages/admin/AuditLog.jsx'
 
 function AppShell() {
-  const { user, loading, setUser, setLoading, showToast, lang } = useStore()
+  const { user, loading, setUser, setLoading, showToast } = useStore()
   const location = useLocation()
+  const isAdmin = location.pathname.startsWith('/admin')
 
   useEffect(() => {
     window.__pbbd_toast__ = showToast
@@ -39,16 +40,20 @@ function AppShell() {
   }, [])
 
   useEffect(() => {
+    // Always verify session in background — never block render on it
     apiFetch('/api/auth/session').then((res) => {
-      if (res?.ok) setUser(res.data.user)
-      else setUser(null)
+      if (res?.ok) {
+        setUser(res.data.user)
+      } else if (res !== null) {
+        // Explicit failure (401/403) — clear stale cache
+        setUser(null)
+      }
+      // res === null means network error — keep cached state, don't log out
       setLoading(false)
     })
   }, [])
 
-  const isAuth = location.pathname === '/login' || location.pathname === '/register'
-  const isAdmin = location.pathname.startsWith('/admin')
-
+  // Only block render for first-time visitors (no cache)
   if (loading) {
     return (
       <div className="min-h-dvh bg-bg flex items-center justify-center">
