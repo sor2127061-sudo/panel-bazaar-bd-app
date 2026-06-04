@@ -10,24 +10,31 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [cookieBlocked, setCookieBlocked] = useState(false)
   const { showToast, setUser, lang } = useStore()
   const navigate = useNavigate()
 
   async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
+    setCookieBlocked(false)
     const res = await apiFetch('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })
     if (!res) { setLoading(false); return }
     if (res.ok) {
-      // Cookie is now set — fetch session to populate user store
       const session = await apiFetch('/api/auth/session')
-      if (session?.ok) setUser(session.data.user)
-      setLoading(false)
-      navigate('/', { replace: true })
+      if (session?.ok) {
+        setUser(session.data.user)
+        setLoading(false)
+        navigate('/', { replace: true })
+      } else {
+        setLoading(false)
+        setCookieBlocked(true)
+      }
     } else {
+      setLoading(false)
       const msg = res.status === 403
         ? t('accountSuspended')
         : res.data?.error || 'লগইন ব্যর্থ হয়েছে'
@@ -48,6 +55,15 @@ export default function Login() {
           </div>
           <LangToggle className="self-start" />
         </div>
+
+        {cookieBlocked && (
+          <div className="bg-danger/10 border border-danger/20 rounded-card p-4 space-y-2">
+            <p className="text-danger text-xs font-body font-semibold">⚠️ Cookie Blocked (CORS/SameSite Issue)</p>
+            <p className="text-muted text-[11px] font-body leading-relaxed">
+              লগইন সফল হয়েছে কিন্তু ব্রাউজার আপনার auth cookie ব্লক করেছে। আপনার backend-এ <b>SameSite=None; Secure</b> সেট করা নেই অথবা CORS preflight-এ headers মিসিং। অনুগ্রহ করে নিচের নির্দেশনা অনুযায়ী Worker-টি আপডেট করুন।
+            </p>
+          </div>
+        )}
 
         <div className="card space-y-4">
           <h2 className="font-display font-semibold text-lg text-text">{t('login')}</h2>
