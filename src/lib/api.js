@@ -18,7 +18,9 @@ async function apiFetch(path, options = {}) {
     const data = await res.json().catch(() => ({}))
 
     if (res.status === 401) {
-      window.location.href = '/login'
+      // Fire event — App.jsx clears user → React Router redirects to /login
+      // Never use window.location.href here (causes infinite reload on /login)
+      window.dispatchEvent(new CustomEvent('pbbd:logout'))
       return null
     }
 
@@ -29,7 +31,7 @@ async function apiFetch(path, options = {}) {
 
     return { ok: res.ok, status: res.status, data }
   } catch {
-    getToast()?.('নেটওয়ার্ক সমস্যা হয়েছে', 'error')
+    // Network error — don't toast on session check (called silently on load)
     return null
   }
 }

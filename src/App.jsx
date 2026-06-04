@@ -29,31 +29,38 @@ function AppShell() {
   const location = useLocation()
   const isAdmin = location.pathname.startsWith('/admin')
 
+  // Register toast globally
   useEffect(() => {
     window.__pbbd_toast__ = showToast
   }, [showToast])
 
+  // Language init
   useEffect(() => {
     const stored = localStorage.getItem('pbbd_lang') || 'bn'
     setLang(stored)
     document.documentElement.lang = stored
   }, [])
 
+  // Listen for 401 from any API call — clear user, React Router redirects to /login
   useEffect(() => {
-    // Always verify session in background — never block render on it
+    function onLogout() { setUser(null) }
+    window.addEventListener('pbbd:logout', onLogout)
+    return () => window.removeEventListener('pbbd:logout', onLogout)
+  }, [setUser])
+
+  // Silent background session verification
+  useEffect(() => {
     apiFetch('/api/auth/session').then((res) => {
       if (res?.ok) {
+        // Update cache with fresh data from server
         setUser(res.data.user)
-      } else if (res !== null) {
-        // Explicit failure (401/403) — clear stale cache
-        setUser(null)
       }
-      // res === null means network error — keep cached state, don't log out
+      // null = network error (keep cached state) or 401 (pbbd:logout event already fired)
       setLoading(false)
     })
   }, [])
 
-  // Only block render for first-time visitors (no cache)
+  // Only block render for first-time visitors with no cached user
   if (loading) {
     return (
       <div className="min-h-dvh bg-bg flex items-center justify-center">
@@ -65,25 +72,25 @@ function AppShell() {
   return (
     <>
       <Routes>
-        <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+        <Route path="/login"    element={user ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
 
-        <Route path="/" element={user ? <Home /> : <Navigate to="/login" replace />} />
-        <Route path="/product/:id" element={user ? <ProductDetail /> : <Navigate to="/login" replace />} />
-        <Route path="/wallet" element={user ? <Wallet /> : <Navigate to="/login" replace />} />
-        <Route path="/topup/success" element={user ? <TopupSuccess /> : <Navigate to="/login" replace />} />
-        <Route path="/orders" element={user ? <Orders /> : <Navigate to="/login" replace />} />
-        <Route path="/profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
+        <Route path="/"              element={user ? <Home />          : <Navigate to="/login" replace />} />
+        <Route path="/product/:id"   element={user ? <ProductDetail /> : <Navigate to="/login" replace />} />
+        <Route path="/wallet"        element={user ? <Wallet />        : <Navigate to="/login" replace />} />
+        <Route path="/topup/success" element={user ? <TopupSuccess />  : <Navigate to="/login" replace />} />
+        <Route path="/orders"        element={user ? <Orders />        : <Navigate to="/login" replace />} />
+        <Route path="/profile"       element={user ? <Profile />       : <Navigate to="/login" replace />} />
 
         <Route
           path="/admin"
           element={user?.is_admin ? <AdminLayout /> : <Navigate to="/" replace />}
         >
-          <Route index element={<Dashboard />} />
-          <Route path="products" element={<Products />} />
-          <Route path="keys" element={<Keys />} />
-          <Route path="orders" element={<AdminOrders />} />
-          <Route path="users" element={<Users />} />
+          <Route index         element={<Dashboard />} />
+          <Route path="products"  element={<Products />} />
+          <Route path="keys"      element={<Keys />} />
+          <Route path="orders"    element={<AdminOrders />} />
+          <Route path="users"     element={<Users />} />
           <Route path="audit-log" element={<AuditLog />} />
         </Route>
 
