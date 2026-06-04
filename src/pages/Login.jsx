@@ -10,7 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
-  const { showToast, lang } = useStore()
+  const { showToast, setUser, lang } = useStore()
   const navigate = useNavigate()
 
   async function handleSubmit(e) {
@@ -20,9 +20,12 @@ export default function Login() {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })
-    setLoading(false)
-    if (!res) return
+    if (!res) { setLoading(false); return }
     if (res.ok) {
+      // Cookie is now set — fetch session to populate user store
+      const session = await apiFetch('/api/auth/session')
+      if (session?.ok) setUser(session.data.user)
+      setLoading(false)
       navigate('/', { replace: true })
     } else {
       const msg = res.status === 403
